@@ -27,10 +27,15 @@ int main(int argc, char **argv) {
     int dry_run = 0;
     int do_all = 0;
     int do_list = 0;
-    int requested[64] = {0};
+    int requested[MAX_ACTIONS] = {0};
     int any_requested = 0;
 
-    struct option long_opts[64];
+    if (action_count > MAX_ACTIONS) {
+        fprintf(stderr, "too many actions (%d); raise MAX_ACTIONS\n", action_count);
+        return 1;
+    }
+
+    struct option long_opts[MAX_ACTIONS + 5]; /* actions + all/dry-run/list/help/terminator */
     int n = 0;
     for (; n < action_count; n++) {
         long_opts[n].name = actions[n].key;
@@ -56,6 +61,11 @@ int main(int argc, char **argv) {
             case 'h': print_usage(argv[0]); return 0;
             default:  print_usage(argv[0]); return 1;
         }
+    }
+
+    if (do_all && any_requested) {
+        fprintf(stderr, "--all cannot be combined with individual action flags\n");
+        return 1;
     }
 
     if (do_list) {

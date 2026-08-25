@@ -1,5 +1,5 @@
 CC = cc
-CFLAGS = -Wall -Wextra -std=c11 -D_DEFAULT_SOURCE
+CFLAGS = -Wall -Wextra -std=c11 -D_DEFAULT_SOURCE -MMD -MP
 LDLIBS = -lncurses
 
 SRCS = main.c menu.c actions.c
@@ -26,3 +26,6 @@ clean:
 	rm -rf build
 
 .PHONY: clean tu
+
+# Auto-generated header dependencies so editing a .h rebuilds dependents.
+-include $(OBJS:.o=.d)

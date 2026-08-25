@@ -8,7 +8,7 @@
 #define MENU_MARGIN 8 /* "[ ] " prefix + left/right border + breathing room */
 
 static const char *footer_text =
-    "up/down move  space toggle  enter run selected  a all  q quit";
+    "up/down move  space toggle  enter run selected  a all/none  q quit";
 
 /* Column width = longest label, so every description starts exactly one
  * space after the longest label regardless of how long any label is. */
@@ -72,9 +72,14 @@ int run_interactive_menu(int dry_run) {
     int label_col_width = compute_label_col_width();
     int width = compute_width(label_col_width);
     WINDOW *win = newwin(height, width, 1, 2);
+    if (!win) {
+        endwin();
+        fprintf(stderr, "terminal too small for menu window\n");
+        return 1;
+    }
     keypad(win, TRUE);
 
-    int selected[64] = {0};
+    int selected[MAX_ACTIONS] = {0};
     int highlight = 0;
     int ch;
     int quit = 0;
@@ -90,12 +95,24 @@ int run_interactive_menu(int dry_run) {
             case KEY_DOWN:
                 highlight = (highlight + 1) % action_count;
                 break;
+            case KEY_RESIZE:
+                erase();
+                refresh();
+                width = compute_width(label_col_width);
+                wresize(win, height, width);
+                break;
             case ' ':
                 selected[highlight] = !selected[highlight];
                 break;
-            case 'a':
-                for (int i = 0; i < action_count; i++) selected[i] = 1;
+            case 'a': {
+                int all_set = 1;
+                for (int i = 0; i < action_count; i++) {
+                    if (!selected[i]) { all_set = 0; break; }
+                }
+                int v = all_set ? 0 : 1;
+                for (int i = 0; i < action_count; i++) selected[i] = v;
                 break;
+            }
             case '\n':
                 quit = 1;
                 break;

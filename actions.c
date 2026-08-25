@@ -26,8 +26,9 @@ const action_t actions[] = {
         "-o -name .mozilla -o -name .steam -o -name .local "
         "-o -name node_modules -o -name result -o -name templates \\) "
         "-prune -o -type f -name devenv.nix -print | while read -r f; do "
-        "d=$(dirname \"$f\"); echo \"== $d ==\"; (cd \"$d\" && devenv update); "
-        "done"
+        "d=$(dirname \"$f\"); echo \"== $d ==\"; "
+        "(cd \"$d\" && devenv update) || fail=1; "
+        "done; exit \"${fail:-0}\""
     },
     {
         "distrobox",
@@ -58,8 +59,8 @@ const action_t actions[] = {
         "-o -name node_modules -o -name result -o -name templates \\) "
         "-prune -o -type f -name flake.nix -print | while read -r f; do "
         "d=$(dirname \"$f\"); echo \"== $d ==\"; "
-        "nix --extra-experimental-features 'nix-command flakes' flake update --flake \"$d\"; "
-        "done"
+        "nix --extra-experimental-features 'nix-command flakes' flake update --flake \"$d\" "
+        "|| fail=1; done; exit \"${fail:-0}\""
     },
     {
         "podman",
@@ -73,26 +74,9 @@ const action_t actions[] = {
         "Apply pending rpm-ostree upgrade",
         0, system_argv, NULL
     },
-    {
-        "toolbox",
-        "Toolbox containers",
-        "Run dnf upgrade inside every toolbox container",
-        1, NULL,
-        "for c in $(toolbox list -c | tail -n +2 | awk '{print $2}'); do "
-        "echo \"== $c ==\"; toolbox run -c \"$c\" sudo dnf upgrade -y; done"
-    },
 };
 
 const int action_count = (int)(sizeof(actions) / sizeof(actions[0]));
-
-int find_action(const char *key) {
-    for (int i = 0; i < action_count; i++) {
-        if (strcmp(actions[i].key, key) == 0) {
-            return i;
-        }
-    }
-    return -1;
-}
 
 /* Builds a human-readable rendering of an argv[] vector for --dry-run
  * output. Not shell-escaped - it's for display only, never re-executed. */
@@ -159,7 +143,9 @@ int run_action(int index, int dry_run) {
             fprintf(stderr, "failed to spawn shell for: %s\n", a->command);
             return -1;
         }
-        return WEXITSTATUS(status);
+        if (WIFEXITED(status)) return WEXITSTATUS(status);
+        fprintf(stderr, "shell terminated by signal %d\n", WTERMSIG(status));
+        return -1;
     }
 
     return run_argv(a->argv);

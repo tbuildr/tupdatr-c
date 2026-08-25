@@ -1,6 +1,10 @@
 #ifndef ACTIONS_H
 #define ACTIONS_H
 
+/* Upper bound on entries in actions[]; main() and the menu size their
+ * state arrays from this. Raise it (and rebuild) when actions grow. */
+#define MAX_ACTIONS 64
+
 typedef struct {
     const char *key;         /* short flag name, e.g. "bootc" */
     const char *label;       /* menu display text */
@@ -30,8 +34,5 @@ extern const int action_count;
 /* Runs one action by index. Returns the command's exit status.
  * If dry_run is nonzero, prints the command instead of running it. */
 int run_action(int index, int dry_run);
-
-/* Looks up an action by its --key flag name. Returns index, or -1 if not found. */
-int find_action(const char *key);
 
 #endif
